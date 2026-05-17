@@ -6,6 +6,15 @@ Built with React, Vite and TypeScript.
 Designed with a premium glassmorphism-inspired UI.
 
 ---
+## Preview
+
+### Home
+![saavn-dl Home](./assets/home.png)
+
+### Track view
+
+![saavn-dl Track view](./assets/track.png)
+---
 
 ## Features
 
