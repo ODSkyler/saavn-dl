@@ -18,7 +18,9 @@
  */
 
 import { downloadWorker } from './queue.js';
-import { addSseClient } from './events.js';
+import { addSseClient, broadcast } from './events.js';
+import { streamArtifact, deleteArtifact } from './artifacts.js';
+import { getJobRow, clearArtifact, getState } from './store.js';
 
 const MAX_BODY_BYTES = 25 * 1024 * 1024; // 25 MB — large playlists carry full song detail
 const VALID_QUALITIES = new Set(['12', '48', '96', '160', '320']);
@@ -160,6 +162,25 @@ export async function handleDownloadsRoute(req, res, url, jsonResponse) {
 
   // /:id and /:id/action
   const parts = rest.split('/').filter(Boolean);
+
+  // GET /api/downloads/:id/artifact → stream the browser-delivery file (one-shot)
+  if (parts.length === 2 && parts[1] === 'artifact' && req.method === 'GET') {
+    const id = decodeURIComponent(parts[0]);
+    const row = getJobRow(id);
+    if (!row || !row.artifact_path) {
+      return jsonResponse(res, 404, { error: 'Artifact not found' });
+    }
+    const ok = await streamArtifact(res, row.artifact_path, row.artifact_name);
+    if (ok) {
+      // Retain until retrieval, then clean up (Req 7.4).
+      void deleteArtifact(row.artifact_path);
+      clearArtifact(id);
+      broadcast(getState());
+    } else if (!res.headersSent) {
+      return jsonResponse(res, 404, { error: 'Artifact file missing' });
+    }
+    return true;
+  }
 
   // DELETE /api/downloads/:id
   if (parts.length === 1 && req.method === 'DELETE') {
