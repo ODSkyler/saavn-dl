@@ -519,6 +519,10 @@ class ServerBackend implements QueueBackend {
   private es: EventSource | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private everConnected = false;
+  // Ids seen in a non-done state this session — used to auto-trigger artifact download
+  // only for jobs that complete live (vs. jobs already done when the tab reconnects).
+  private seenActive: Set<string> = new Set();
+  private autoTriggered: Set<string> = new Set();
 
   constructor() {
     // Fast initial paint, then a live stream (SSE) with a polling fallback.
@@ -541,12 +545,52 @@ class ServerBackend implements QueueBackend {
   }
 
   private applyServerState(raw: ServerStateDTO): void {
+    const items = (raw.items || []).map(mapServerItem);
     this.state = {
-      items: (raw.items || []).map(mapServerItem),
+      items,
       isProcessing: !!raw.isProcessing,
       isPaused: !!raw.isPaused,
     };
+    this.handleArtifacts(items);
     this.emit();
+  }
+
+  /**
+   * Auto-trigger browser download for browser-delivery jobs that complete while the tab is
+   * open. Jobs that are already `done` on first load (reconnect) are left for manual pickup
+   * (Req 7.2 vs 7.3).
+   */
+  private handleArtifacts(items: QueueItem[]): void {
+    for (const item of items) {
+      if (item.status !== 'done' && item.status !== 'failed' && item.status !== 'cancelled') {
+        this.seenActive.add(item.id);
+      }
+      if (
+        item.status === 'done' &&
+        item.hasArtifact &&
+        this.seenActive.has(item.id) &&
+        !this.autoTriggered.has(item.id)
+      ) {
+        this.autoTriggered.add(item.id);
+        this.triggerArtifactDownload(item.id);
+      }
+    }
+  }
+
+  private triggerArtifactDownload(id: string): void {
+    if (typeof document === 'undefined') return;
+    const a = document.createElement('a');
+    a.href = `/api/downloads/${encodeURIComponent(id)}/artifact`;
+    a.download = '';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  /** Manual artifact retrieval (e.g. after reconnect). */
+  downloadArtifact(id: string): void {
+    this.autoTriggered.add(id);
+    this.triggerArtifactDownload(id);
   }
 
   private async refresh(): Promise<void> {
@@ -740,8 +784,13 @@ class QueueRouter implements QueueBackend {
   }
 
   addTrack(song: SaavnSong, quality: Quality, overrideMeta?: TrackMetadata, overrideFilename?: string): void {
-    // Tracks are browser-delivery ("Add to Queue" downloads the file). Keep in-browser.
-    this.memory.addTrack(song, quality, overrideMeta, overrideFilename);
+    // When the server is available, process the track headless and deliver the file via an
+    // artifact; otherwise download it in-browser.
+    if (this.serverReady && this.server) {
+      this.server.addTrack(song, quality, overrideMeta, overrideFilename);
+    } else {
+      this.memory.addTrack(song, quality, overrideMeta, overrideFilename);
+    }
   }
 
   addAlbum(
@@ -751,12 +800,19 @@ class QueueRouter implements QueueBackend {
     albumArtistOverride?: string,
     isPlaylist?: boolean,
   ): void {
-    // Route library jobs to the server (headless, restart-safe); browser-delivery
-    // (zip / individual) stays in the in-browser pipeline in Phase 1.
-    if (mode === 'library' && this.serverReady && this.server) {
+    // All modes (library + browser-delivery zip/individual) run server-side when available;
+    // otherwise the in-browser pipeline handles them.
+    if (this.serverReady && this.server) {
       this.server.addAlbum(album, quality, mode, albumArtistOverride, isPlaylist);
     } else {
       this.memory.addAlbum(album, quality, mode, albumArtistOverride, isPlaylist);
+    }
+  }
+
+  /** Manually retrieve a completed browser-delivery artifact (server jobs only). */
+  downloadArtifact(id: string): void {
+    if (this.server && this.serverState.items.some((i) => i.id === id)) {
+      this.server.downloadArtifact(id);
     }
   }
 

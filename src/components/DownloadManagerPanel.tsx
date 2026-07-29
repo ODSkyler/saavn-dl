@@ -15,6 +15,7 @@ export default function DownloadManagerPanel({ isOpen, onClose }: Props) {
     removeItem, retryItem, cancelCurrent,
     clearCompleted, clearAll,
     pause, resume, moveUp, moveDown,
+    downloadArtifact,
   } = useDownloadQueue();
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -239,6 +240,7 @@ function DownloadRow({
   onMoveUp, onMoveDown, canMoveUp, canMoveDown,
 }: DownloadRowProps) {
   const thumbUrl = proxyImage(item.image, '50x50');
+  const { downloadArtifact } = useDownloadQueue();
 
   const statusColor = {
     queued: 'text-white/50',
@@ -310,6 +312,19 @@ function DownloadRow({
 
         {/* Quick actions */}
         <div className="flex items-center gap-0.5 flex-shrink-0">
+          {item.status === 'done' && item.hasArtifact && (
+            <button
+              onClick={() => downloadArtifact(item.id)}
+              className="p-1.5 rounded-lg text-cyan/70 hover:text-cyan hover:bg-cyan/10 transition-all"
+              title="Download file"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </button>
+          )}
           {item.status === 'downloading' && (
             <button
               onClick={onCancel}
@@ -471,6 +486,18 @@ function ExpandedDetails({ item }: { item: QueueItem }) {
           </svg>
           <p className="text-[9px] font-mono text-violet-300/70">
             Album Artist: {(item as QueueAlbumItem).albumArtistOverride}
+          </p>
+        </div>
+      )}
+
+      {/* Individual-as-zip note (server processing delivers a single archive) */}
+      {item.type === 'album' && (item as QueueAlbumItem).mode === 'individual' && (
+        <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/5 border border-border">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0 text-white/40">
+            <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
+          </svg>
+          <p className="text-[9px] font-mono text-white/50">
+            When processed on the server, individual files are delivered as a single ZIP.
           </p>
         </div>
       )}
