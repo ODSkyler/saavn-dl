@@ -15,6 +15,7 @@ import PlaylistResultCard from './components/playlist/PlaylistResultCard';
 import PlaylistPage from './components/playlist/PlaylistPage';
 import DiscoverPage from './components/discover/DiscoverPage';
 import PlaylistsPage from './components/playlists/PlaylistsPage';
+import PrimaryNav from './components/nav/PrimaryNav';
 import { DownloadQueueProvider } from './components/DownloadQueueContext';
 import { DownloadPrefsProvider } from './components/DownloadPrefsContext';
 import DownloadIndicator from './components/DownloadIndicator';
@@ -373,30 +374,19 @@ export default function App() {
               </div>
             </motion.div>
 
-            {/* Segmented control — top-level navigation */}
-            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.05 }} className="w-full max-w-2xl mb-6">
-              <div className="inline-flex rounded-xl border border-border bg-glass/50 p-1">
-                {(
-                  (() => {
-                    const sections: Section[] = ['search', 'discover'];
-                    if (musicPathEnabled) sections.push('library');
-                    if (playlistsEnabled) sections.push('playlists');
-                    sections.push('history');
-                    return sections;
-                  })()
-                ).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setSection(s)}
-                    className={`relative px-5 py-1.5 rounded-lg text-[12px] font-display font-semibold capitalize transition-all duration-200 ${section === s
-                      ? 'bg-cyan/15 text-cyan border border-cyan/30'
-                      : 'text-text-muted hover:text-text-secondary border border-transparent'
-                      }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
+            {/* Top-level navigation — desktop pill / mobile bottom bar */}
+            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.05 }} className="w-full max-w-2xl mb-0 sm:mb-6">
+              <PrimaryNav
+                sections={(() => {
+                  const s: Section[] = ['search', 'discover'];
+                  if (musicPathEnabled) s.push('library');
+                  if (playlistsEnabled) s.push('playlists');
+                  s.push('history');
+                  return s;
+                })()}
+                active={section}
+                onSelect={(s) => setSection(s as Section)}
+              />
             </motion.div>
 
             {/* Search bar — only when search section is active */}
@@ -607,6 +597,9 @@ export default function App() {
             </motion.div>
             )}
             </AnimatePresence>
+
+            {/* Spacer so scrolled content clears the fixed mobile bottom bar */}
+            <div aria-hidden className="h-20 sm:hidden" />
 
           </div>
         </div>
