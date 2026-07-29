@@ -18,6 +18,7 @@ Built with React 18, Vite, TypeScript, and TailwindCSS.
 - **Metadata editor** — edit title, artist, album, year per-track before downloading
 - **Navidrome compatibility** — auto-detects multi-artist albums and offers a unified Album Artist tag
 - **Background download queue** — queue multiple songs/albums/playlists with pause, cancel, reorder, and retry
+- **Server-side downloads** (self-hosted) — the whole download (decrypt, fetch, ffmpeg embed) runs on the server: queued "Save to Library" jobs survive closing the tab and resume after a restart; browser downloads are produced server-side and delivered when ready
 - **Save to Library** — save tracks directly to a server-side directory (Artist/Album/Track structure)
 - **Library Sync** — stage downloads on a fast SSD and sync to NAS on a cron schedule
 - **Download History** — SQLite-backed history with "already downloaded" badges on search results
@@ -31,7 +32,7 @@ Built with React 18, Vite, TypeScript, and TailwindCSS.
 |-------|-----------|
 | UI | React 18, TailwindCSS, Framer Motion |
 | Build | Vite 5, TypeScript 5 |
-| Audio | ffmpeg.wasm (in-browser), CryptoJS (DES decryption) |
+| Audio | ffmpeg.wasm (in-browser) + ffmpeg-static (server-side), CryptoJS (DES decryption) |
 | Server | Node 20 (raw `node:http`), better-sqlite3, node-cron |
 | Packaging | Docker (multi-stage Bookworm build) |
 
@@ -93,6 +94,9 @@ A ready-to-use `docker-compose.yml` is included in the repository with Gluetun (
 | `SAAVN_LIBRARY_PATH` | _(empty)_ | Fast SSD staging directory. Empty = Save to Library disabled. |
 | `SAAVN_MUSIC_PATH` | _(empty)_ | Permanent NAS directory. Empty = Library Sync disabled. |
 | `SAAVN_DB_PATH` | `./data/saavn-dl.db` | Path to SQLite database file (Docker default: `/data/saavn-dl.db`). |
+| `SAAVN_FFMPEG_PATH` | _(empty)_ | Override path to an ffmpeg binary for server-side downloads. Empty = use the bundled `ffmpeg-static`. |
+| `SAAVN_ARTIFACT_DIR` | _(DB dir)_`/artifacts` | Where server-side browser-delivery files are held until the browser fetches them. |
+| `SAAVN_ARTIFACT_TTL` | `86400` | Seconds to keep an unfetched browser-delivery artifact before cleanup (default 24h). |
 | `SAAVN_FORCE_PROXY` | _(empty)_ | Set to `true` or `1` to prevent fallback to direct browser fetch. Requests fail if the VPN proxy is unreachable. |
 | `PORT` | `80` | Server listen port. |
 | `STATIC_DIR` | `./dist` | Path to built frontend assets. |
@@ -150,6 +154,22 @@ Queue multiple songs and albums, then keep browsing while they download sequenti
 - Full management panel: cancel, pause/resume, reorder, retry, expand for details
 - Navidrome multi-artist fix applied automatically to queued albums
 - All traffic (API calls + downloads) routes through `/api/proxy` (VPN) when self-hosted
+
+> When self-hosted with `SAAVN_LIBRARY_PATH` set and ffmpeg available, the queue runs **on the server** — see below.
+
+---
+
+## Server-Side Downloads
+
+When self-hosted, the entire download pipeline (decrypt → fetch → ffmpeg metadata/cover embed) runs on the server instead of the browser tab, backed by a persistent SQLite job queue.
+
+- **Survives tab closure** — queued "Save to Library" downloads keep running after you close the tab
+- **Restart-safe** — the queue is persisted; jobs interrupted by a server restart automatically resume
+- **Browser delivery** — direct/ZIP/individual downloads are produced on the server and stored as short-lived **artifacts**; the browser fetches the finished file automatically when it completes, or via a manual "Download" button in the queue panel if you'd closed the tab (individual album files are delivered as a single ZIP when processed on the server)
+- **Live progress** — the download manager updates over Server-Sent Events with automatic reconnect (polling fallback)
+- **Requires ffmpeg** — bundled via `ffmpeg-static`; override with `SAAVN_FFMPEG_PATH` (e.g. an apt-installed `/usr/bin/ffmpeg`)
+
+Enabled automatically when `SAAVN_LIBRARY_PATH` is set **and** an ffmpeg binary is available; surfaced as `serverDownloadsEnabled` in `/api/config`. On static deployments (e.g. Vercel) where there is no server, downloads run in the browser exactly as before.
 
 ---
 
@@ -219,7 +239,7 @@ saavn-dl detects this automatically:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/config` | Server capabilities (library, sync, history flags) |
+| `GET` | `/api/config` | Server capabilities (library, sync, history, server-downloads flags) |
 | `GET` | `/api/proxy?url=` | Proxy all external fetches through server (VPN) — API calls, audio, images |
 | `GET` | `/api/library/browse?path=` | List directory contents |
 | `POST` | `/api/library/sync` | Trigger immediate sync |
@@ -233,6 +253,14 @@ saavn-dl detects this automatically:
 | `POST` | `/api/history` | Record a download |
 | `DELETE` | `/api/history` | Clear all history |
 | `DELETE` | `/api/history/:id` | Remove a specific entry |
+| `GET` | `/api/downloads` | Current server-side download queue state |
+| `GET` | `/api/downloads/events` | Live queue updates (Server-Sent Events) |
+| `POST` | `/api/downloads/track` | Enqueue a track job |
+| `POST` | `/api/downloads/album` | Enqueue an album/playlist job |
+| `POST` | `/api/downloads/:id/cancel` \| `/retry` \| `/move` | Cancel, retry, or reorder a job |
+| `DELETE` | `/api/downloads/:id` | Remove a job |
+| `POST` | `/api/downloads/pause` \| `/resume` \| `/clear-completed` | Queue controls |
+| `GET` | `/api/downloads/:id/artifact` | Fetch a completed browser-delivery file |
 
 ---
 
