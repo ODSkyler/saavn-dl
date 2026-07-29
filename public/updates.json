@@ -1,5 +1,11 @@
 [
   {
+    "id": 18,
+    "title": "Server-Side Downloads — Survive Tab Close & Restarts",
+    "date": "29-07-2026",
+    "content": "When self-hosted, the download pipeline now runs on the server instead of your browser tab. Queued 'Save to Library' downloads keep running even if you close the tab, and the queue is remembered across server restarts — interrupted downloads resume automatically. Browser downloads (single track, ZIP, or individual) are also processed on the server and delivered to your browser when ready; if you close the tab mid-download, a Download button appears in the queue panel so you can grab the finished file on your next visit (individual album files are delivered as a single ZIP when processed on the server). The download manager updates live over a persistent connection, with automatic reconnect. This requires ffmpeg on the server (bundled via ffmpeg-static; override with SAAVN_FFMPEG_PATH) and a configured SAAVN_LIBRARY_PATH. Static deployments (Vercel) continue to download in the browser exactly as before."
+  },
+  {
     "id": 17,
     "title": "Full VPN Proxy — All Traffic Routed",
     "date": "21-07-2026",
