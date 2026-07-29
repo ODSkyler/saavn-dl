@@ -21,6 +21,10 @@ import { handlePlaylistRoute } from './playlists/routes.js';
 import { handleProxyRoute } from './proxy.js';
 import { initScheduler } from './library/sync-scheduler.js';
 import { backfillFilePaths } from './playlists/store.js';
+import { handleDownloadsRoute } from './downloads/routes.js';
+import { probeFfmpeg } from './downloads/ffmpeg.js';
+import { downloadWorker } from './downloads/queue.js';
+import { sweepArtifacts, ARTIFACT_TTL_SECONDS } from './downloads/artifacts.js';
 
 const PORT = parseInt(process.env.PORT || '80', 10);
 const STATIC_DIR = resolve(process.env.STATIC_DIR || './dist');
@@ -28,6 +32,10 @@ const LIBRARY_PATH = process.env.SAAVN_LIBRARY_PATH || '';
 const MUSIC_PATH = process.env.SAAVN_MUSIC_PATH || '';
 const DB_PATH = process.env.SAAVN_DB_PATH || './data/saavn-dl.db';
 const FORCE_PROXY = process.env.SAAVN_FORCE_PROXY === 'true' || process.env.SAAVN_FORCE_PROXY === '1';
+
+// Set once at startup after the ffmpeg probe (see startup()). Server-side downloads
+// require both a library destination and a working ffmpeg binary.
+let serverDownloadsEnabled = false;
 
 const MIME_TYPES = {
   '.html': 'text/html',
@@ -101,6 +109,7 @@ async function handleApiConfig(req, res) {
     dbEnabled: true,
     dbPath: DB_PATH,
     forceProxy: FORCE_PROXY,
+    serverDownloadsEnabled,
   });
 }
 
@@ -414,6 +423,14 @@ const server = createServer(async (req, res) => {
       const handled = await handlePlaylistRoute(req, res, url, jsonResponse);
       if (handled !== false) return;
     }
+    // Server-side download queue routes (/api/downloads*)
+    if (url.pathname === '/api/downloads' || url.pathname.startsWith('/api/downloads/')) {
+      if (!serverDownloadsEnabled) {
+        return jsonResponse(res, 404, { error: 'Server-side downloads are not enabled' });
+      }
+      const handled = await handleDownloadsRoute(req, res, url, jsonResponse);
+      if (handled !== false) return;
+    }
 
     // Static files
     await serveStatic(req, res);
@@ -427,36 +444,74 @@ const server = createServer(async (req, res) => {
 
 // ─── Startup ──────────────────────────────────────────────────────────────────
 
-// Initialize database before accepting requests
-try {
-  initDb();
-} catch (err) {
-  console.error('[saavn-dl] FATAL: Database initialization failed:', err.message);
-  process.exit(1);
+async function startup() {
+  // Initialize database before accepting requests
+  try {
+    initDb();
+  } catch (err) {
+    console.error('[saavn-dl] FATAL: Database initialization failed:', err.message);
+    process.exit(1);
+  }
+
+  // Probe ffmpeg to decide whether server-side downloads can run (Req 1.5, 8.3).
+  let ffmpegAvailable = false;
+  try {
+    ffmpegAvailable = await probeFfmpeg();
+  } catch (err) {
+    console.warn('[saavn-dl] ffmpeg probe threw:', err.message);
+  }
+  serverDownloadsEnabled = !!LIBRARY_PATH && ffmpegAvailable;
+
+  server.listen(PORT, () => {
+    console.log(`[saavn-dl] Server running on port ${PORT}`);
+    console.log(`[saavn-dl] Static dir: ${STATIC_DIR}`);
+    console.log(`[saavn-dl] Database: ${DB_PATH}`);
+
+    if (LIBRARY_PATH) {
+      console.log(`[saavn-dl] Library path: ${LIBRARY_PATH} (Save to Library enabled)`);
+    } else {
+      console.log(`[saavn-dl] SAAVN_LIBRARY_PATH not set — Save to Library disabled`);
+    }
+
+    // Server-side download queue
+    if (serverDownloadsEnabled) {
+      console.log(`[saavn-dl] Server-side downloads enabled (ffmpeg available)`);
+      downloadWorker.start();
+
+      // Periodic sweep of stale browser-delivery artifacts (Req 7.4).
+      const sweep = () => {
+        sweepArtifacts()
+          .then((n) => { if (n > 0) console.log(`[saavn-dl] Swept ${n} stale download artifact(s)`); })
+          .catch(() => { /* ignore */ });
+      };
+      sweep();
+      const sweepTimer = setInterval(sweep, 60 * 60 * 1000); // hourly
+      if (sweepTimer.unref) sweepTimer.unref();
+      console.log(`[saavn-dl] Artifact TTL: ${ARTIFACT_TTL_SECONDS}s`);
+    } else if (!LIBRARY_PATH) {
+      console.log(`[saavn-dl] Server-side downloads disabled — SAAVN_LIBRARY_PATH not set`);
+    } else {
+      console.log(
+        `[saavn-dl] Server-side downloads disabled — ffmpeg not available ` +
+          `(install ffmpeg-static or set SAAVN_FFMPEG_PATH). Client will use the in-browser pipeline.`,
+      );
+    }
+
+    if (MUSIC_PATH) {
+      console.log(`[saavn-dl] Music path: ${MUSIC_PATH} (Sync to NAS enabled)`);
+      initScheduler();
+      // Run file path backfill in background (populates file_path for existing tracks)
+      backfillFilePaths(MUSIC_PATH).then(result => {
+        if (result.matched > 0) {
+          console.log(`[saavn-dl] File path backfill: ${result.matched} matched, ${result.unmatched} unmatched of ${result.total} tracks`);
+        }
+      }).catch(err => {
+        console.warn('[saavn-dl] File path backfill failed:', err.message);
+      });
+    } else {
+      console.log(`[saavn-dl] SAAVN_MUSIC_PATH not set — Sync to NAS disabled`);
+    }
+  });
 }
 
-server.listen(PORT, () => {
-  console.log(`[saavn-dl] Server running on port ${PORT}`);
-  console.log(`[saavn-dl] Static dir: ${STATIC_DIR}`);
-  console.log(`[saavn-dl] Database: ${DB_PATH}`);
-
-  if (LIBRARY_PATH) {
-    console.log(`[saavn-dl] Library path: ${LIBRARY_PATH} (Save to Library enabled)`);
-  } else {
-    console.log(`[saavn-dl] SAAVN_LIBRARY_PATH not set — Save to Library disabled`);
-  }
-  if (MUSIC_PATH) {
-    console.log(`[saavn-dl] Music path: ${MUSIC_PATH} (Sync to NAS enabled)`);
-    initScheduler();
-    // Run file path backfill in background (populates file_path for existing tracks)
-    backfillFilePaths(MUSIC_PATH).then(result => {
-      if (result.matched > 0) {
-        console.log(`[saavn-dl] File path backfill: ${result.matched} matched, ${result.unmatched} unmatched of ${result.total} tracks`);
-      }
-    }).catch(err => {
-      console.warn('[saavn-dl] File path backfill failed:', err.message);
-    });
-  } else {
-    console.log(`[saavn-dl] SAAVN_MUSIC_PATH not set — Sync to NAS disabled`);
-  }
-});
+startup();

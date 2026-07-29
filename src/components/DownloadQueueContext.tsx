@@ -25,6 +25,7 @@ interface DownloadQueueContextValue {
   resume: () => void;
   moveUp: (id: string) => void;
   moveDown: (id: string) => void;
+  downloadArtifact: (id: string) => void;
 }
 
 const DownloadQueueContext = createContext<DownloadQueueContextValue | null>(null);
@@ -61,6 +62,7 @@ export function DownloadQueueProvider({ children }: { children: React.ReactNode 
   const resume = useCallback(() => downloadQueue.resume(), []);
   const moveUp = useCallback((id: string) => downloadQueue.moveUp(id), []);
   const moveDown = useCallback((id: string) => downloadQueue.moveDown(id), []);
+  const downloadArtifact = useCallback((id: string) => downloadQueue.downloadArtifact(id), []);
 
   const activeCount = state.items.filter((i) => i.status === 'downloading').length;
   const queuedCount = state.items.filter((i) => i.status === 'queued').length;
@@ -86,6 +88,7 @@ export function DownloadQueueProvider({ children }: { children: React.ReactNode 
         resume,
         moveUp,
         moveDown,
+        downloadArtifact,
       }}
     >
       {children}
