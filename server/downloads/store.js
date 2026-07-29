@@ -164,6 +164,38 @@ export function updateProgress(id, progress, stage) {
     .run(Math.round(progress) || 0, stage || '', id);
 }
 
+/** Record a completed browser-delivery artifact for a job. */
+export function setArtifact(id, artifactPath, artifactName) {
+  getDb()
+    .prepare(`UPDATE download_jobs SET artifact_path = ?, artifact_name = ?, updated_at = datetime('now') WHERE id = ?`)
+    .run(artifactPath || '', artifactName || '', id);
+}
+
+/** Clear the artifact reference on a job (after it has been fetched/deleted). */
+export function clearArtifact(id) {
+  getDb()
+    .prepare(`UPDATE download_jobs SET artifact_path = '', updated_at = datetime('now') WHERE id = ?`)
+    .run(id);
+}
+
+/** Artifact file paths for jobs in the given statuses (for cleanup). */
+export function getArtifactPathsForStatuses(statuses) {
+  if (!Array.isArray(statuses) || statuses.length === 0) return [];
+  const placeholders = statuses.map(() => '?').join(',');
+  return getDb()
+    .prepare(`SELECT artifact_path FROM download_jobs WHERE status IN (${placeholders}) AND artifact_path != ''`)
+    .all(...statuses)
+    .map((r) => r.artifact_path);
+}
+
+/** All non-empty artifact paths (for clearAll cleanup). */
+export function getAllArtifactPaths() {
+  return getDb()
+    .prepare(`SELECT artifact_path FROM download_jobs WHERE artifact_path != ''`)
+    .all()
+    .map((r) => r.artifact_path);
+}
+
 /** Reset all jobs stuck in 'downloading' back to 'queued' (restart recovery). */
 export function resetDownloadingToQueued() {
   const info = getDb()

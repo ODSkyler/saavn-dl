@@ -45,6 +45,11 @@ export function getDb() {
   return initDb();
 }
 
+/** Absolute path to the SQLite database file (used to derive sibling data dirs). */
+export function getDbPath() {
+  return DB_PATH;
+}
+
 export function initDb() {
   const dir = dirname(DB_PATH);
   if (!existsSync(dir)) {
