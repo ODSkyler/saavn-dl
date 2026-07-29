@@ -24,6 +24,7 @@ import { backfillFilePaths } from './playlists/store.js';
 import { handleDownloadsRoute } from './downloads/routes.js';
 import { probeFfmpeg } from './downloads/ffmpeg.js';
 import { downloadWorker } from './downloads/queue.js';
+import { sweepArtifacts, ARTIFACT_TTL_SECONDS } from './downloads/artifacts.js';
 
 const PORT = parseInt(process.env.PORT || '80', 10);
 const STATIC_DIR = resolve(process.env.STATIC_DIR || './dist');
@@ -476,6 +477,17 @@ async function startup() {
     if (serverDownloadsEnabled) {
       console.log(`[saavn-dl] Server-side downloads enabled (ffmpeg available)`);
       downloadWorker.start();
+
+      // Periodic sweep of stale browser-delivery artifacts (Req 7.4).
+      const sweep = () => {
+        sweepArtifacts()
+          .then((n) => { if (n > 0) console.log(`[saavn-dl] Swept ${n} stale download artifact(s)`); })
+          .catch(() => { /* ignore */ });
+      };
+      sweep();
+      const sweepTimer = setInterval(sweep, 60 * 60 * 1000); // hourly
+      if (sweepTimer.unref) sweepTimer.unref();
+      console.log(`[saavn-dl] Artifact TTL: ${ARTIFACT_TTL_SECONDS}s`);
     } else if (!LIBRARY_PATH) {
       console.log(`[saavn-dl] Server-side downloads disabled — SAAVN_LIBRARY_PATH not set`);
     } else {
