@@ -518,7 +518,9 @@ class ServerBackend implements QueueBackend {
   private listeners: Set<QueueListener> = new Set();
   private es: EventSource | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
-  private everConnected = false;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectAttempts = 0;
+  private disposed = false;
   // Ids seen in a non-done state this session — used to auto-trigger artifact download
   // only for jobs that complete live (vs. jobs already done when the tab reconnects).
   private seenActive: Set<string> = new Set();
@@ -603,37 +605,80 @@ class ServerBackend implements QueueBackend {
   }
 
   private connect(): void {
-    if (typeof EventSource !== 'undefined') {
-      try {
-        this.es = new EventSource('/api/downloads/events');
-        this.es.onmessage = (e) => {
-          this.everConnected = true;
-          try {
-            this.applyServerState(JSON.parse(e.data));
-          } catch {
-            /* ignore malformed frame */
-          }
-        };
-        this.es.onerror = () => {
-          // If we never established a stream, SSE is unavailable → poll.
-          // If we had connected, let EventSource auto-reconnect (e.g. server restart).
-          if (!this.everConnected) {
-            this.es?.close();
-            this.es = null;
-            this.startPolling();
-          }
-        };
-        return;
-      } catch {
-        /* fall through to polling */
-      }
+    if (typeof EventSource === 'undefined') {
+      // No SSE support (very old browsers) — poll only.
+      this.startPolling();
+      return;
     }
+    try {
+      const es = new EventSource('/api/downloads/events');
+      this.es = es;
+      es.onopen = () => {
+        // Live stream established — reset backoff and stop the polling fallback.
+        this.reconnectAttempts = 0;
+        this.stopPolling();
+      };
+      es.onmessage = (e) => {
+        this.reconnectAttempts = 0;
+        this.stopPolling();
+        try {
+          this.applyServerState(JSON.parse(e.data));
+        } catch {
+          /* ignore malformed frame */
+        }
+      };
+      es.onerror = () => this.handleSseError();
+    } catch {
+      this.startPolling();
+    }
+  }
+
+  /**
+   * On an SSE drop (transient network blip, server restart, or an unreachable stream),
+   * close the stream, keep state fresh via polling, and retry SSE with exponential backoff.
+   * On reconnect the server re-sends the full snapshot, so state stays consistent (Req 4.3).
+   */
+  private handleSseError(): void {
+    if (this.disposed) return;
+    this.es?.close();
+    this.es = null;
     this.startPolling();
+    this.scheduleReconnect();
+  }
+
+  private scheduleReconnect(): void {
+    if (this.disposed || this.reconnectTimer) return;
+    const delay = Math.min(30_000, 1000 * 2 ** this.reconnectAttempts);
+    this.reconnectAttempts++;
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      if (!this.disposed) this.connect();
+    }, delay);
   }
 
   private startPolling(): void {
-    if (this.pollTimer) return;
+    if (this.pollTimer || this.disposed) return;
     this.pollTimer = setInterval(() => void this.refresh(), 2000);
+  }
+
+  private stopPolling(): void {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+  }
+
+  /** Tear down the stream, polling, and reconnect timers (clean teardown). */
+  dispose(): void {
+    this.disposed = true;
+    this.es?.close();
+    this.es = null;
+    this.stopPolling();
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.listeners.clear();
   }
 
   // ── Mutations (optimistically apply the returned state) ────────────────────
