@@ -15,6 +15,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import JSZip from 'jszip';
 import { getDb } from '../db/index.js';
 import { fetchAllowed } from './fetcher.js';
 import { sanitizeFilename } from './decrypt.js';
@@ -226,6 +227,26 @@ async function downloadTrackToLibrary(song, quality, { jobId, signal, artist, al
   return { ok: false, error: lastErr };
 }
 
+/**
+ * Download + tag one track into an in-memory Buffer with a single retry
+ * (browser-delivery / zip modes — no library write).
+ * @returns {Promise<{ ok: boolean, buffer?: Buffer, error?: string }>}
+ */
+async function downloadTrackToBuffer(song, quality, { jobId, signal, artist, albumArtist, onProgress }) {
+  let lastErr = '';
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (signal?.aborted) throw new Error('Aborted');
+    try {
+      const buffer = await processTrack(song, quality, { jobId, signal, artist, albumArtist, onProgress });
+      return { ok: true, buffer };
+    } catch (err) {
+      if (signal?.aborted) throw err;
+      lastErr = err instanceof Error ? err.message : 'Unknown error';
+    }
+  }
+  return { ok: false, error: lastErr };
+}
+
 // ─── Album (library) ─────────────────────────────────────────────────────────
 
 /**
@@ -408,4 +429,64 @@ export async function processPlaylistLibrary(album, quality, ctx) {
 
   setProgress(100, 'Done!');
   return results;
+}
+
+
+// ─── Album / playlist archive (browser-delivery: zip / individual) ───────────
+
+/**
+ * Process an album/playlist job into a single ZIP archive Buffer (browser-delivery).
+ * Album "individual" mode is also delivered as a single zip (Req 7.5). Tracks keep their
+ * own metadata; the unified Album Artist tag (Navidrome fix) is applied when provided.
+ *
+ * @param {object} album      AlbumDetail
+ * @param {string} quality
+ * @param {object} ctx        { jobId, signal, albumArtistOverride, setTrack, setProgress }
+ * @returns {Promise<{ buffer: Buffer, filename: string, results: Array }>}
+ */
+export async function processAlbumArchive(album, quality, ctx) {
+  const { jobId, signal, albumArtistOverride, setTrack, setProgress } = ctx;
+  const songs = album.songs || [];
+  const folderName = sanitizeFilename(`${album.title} (${album.year})`);
+
+  const zip = new JSZip();
+  const folder = zip.folder(folderName) || zip;
+  const results = [];
+
+  for (let i = 0; i < songs.length; i++) {
+    if (signal?.aborted) throw new Error('Aborted');
+    const song = songs[i];
+    const artistName = getArtistName(song);
+
+    setTrack(i, { status: 'downloading' });
+    // Reserve the last 8% of the bar for zip assembly.
+    const res = await downloadTrackToBuffer(song, quality, {
+      jobId,
+      signal,
+      artist: artistName,
+      albumArtist: albumArtistOverride || artistName,
+      onProgress: (stage, p) => setProgress(Math.round(((i + p / 100) / songs.length) * 92), stage),
+    });
+
+    if (res.ok) {
+      const filename = `${String(i + 1).padStart(2, '0')} - ${sanitizeFilename(song.title)} - ${sanitizeFilename(artistName)}.m4a`;
+      folder.file(filename, res.buffer);
+      setTrack(i, { status: 'done' });
+      results.push({ song, status: 'done', artist: artistName });
+    } else {
+      setTrack(i, { status: 'failed', error: res.error });
+      results.push({ song, status: 'failed', error: res.error, artist: artistName });
+    }
+  }
+
+  if (signal?.aborted) throw new Error('Aborted');
+
+  setProgress(94, 'Building ZIP…');
+  const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'STORE' }, (meta) => {
+    setProgress(94 + Math.round(meta.percent * 0.05), `Compressing ${meta.percent.toFixed(0)}%…`);
+  });
+
+  const filename = `${sanitizeFilename(album.title)} (${album.year}).zip`;
+  setProgress(100, 'Done!');
+  return { buffer, filename, results };
 }
