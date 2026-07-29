@@ -39,7 +39,7 @@ const ALLOWED_SUFFIXES = [
   '.workers.dev',
 ];
 
-function isAllowedHost(hostname) {
+export function isAllowedHost(hostname) {
   if (ALLOWED_HOSTS.includes(hostname)) return true;
   return ALLOWED_SUFFIXES.some((suffix) => hostname.endsWith(suffix));
 }
