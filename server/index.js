@@ -351,9 +351,11 @@ async function serveStatic(req, res) {
 
     setCorsHeaders(res);
 
-    // Cache immutable assets (hashed filenames from Vite)
+    // Cache immutable assets (hashed filenames from Vite); never cache the HTML shell
     if (urlPath.startsWith('/assets/')) {
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else {
+      res.setHeader('Cache-Control', 'no-cache');
     }
 
     res.writeHead(200, { 'Content-Type': contentType });
@@ -364,6 +366,7 @@ async function serveStatic(req, res) {
       const indexPath = join(STATIC_DIR, 'index.html');
       const html = await readFile(indexPath);
       setCorsHeaders(res);
+      res.setHeader('Cache-Control', 'no-cache');
       res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(html);
     } catch {
