@@ -16,10 +16,12 @@ import { broadcast } from './events.js';
 import { recordTrack, recordAlbum } from './recorder.js';
 import { processTrack, writeToLibrary, getArtistTag, isLibraryConfigured } from './engine.js';
 import { cleanupJobTempDir } from './ffmpeg.js';
+import { writeArtifact, deleteArtifact } from './artifacts.js';
 import { sanitizeFilename } from './decrypt.js';
 import {
   processAlbumLibrary,
   processPlaylistLibrary,
+  processAlbumArchive,
   detectMultiArtist,
   getArtistName,
 } from './album.js';
@@ -107,6 +109,7 @@ class DownloadWorker {
       await cleanupJobTempDir(job.id);
       if (this.pendingRemoval.has(job.id)) {
         this.pendingRemoval.delete(job.id);
+        this.deleteJobArtifact(job.id);
         store.removeJob(job.id);
       }
       this.activeJobId = null;
@@ -114,6 +117,12 @@ class DownloadWorker {
       this.emit();
       if (!store.isPaused()) this.tick();
     }
+  }
+
+  /** Best-effort delete of a job's browser-delivery artifact file. */
+  deleteJobArtifact(id) {
+    const row = store.getJobRow(id);
+    if (row && row.artifact_path) void deleteArtifact(row.artifact_path);
   }
 
   /** Per-job progress/track hooks with throttled broadcasting. */
@@ -142,13 +151,6 @@ class DownloadWorker {
   async processTrackJob(job, payload, ctx, signal) {
     const { song, quality, mode, overrideMeta, overrideFilename } = payload;
 
-    if (mode !== 'library') {
-      // Browser-delivery track modes (direct) are handled by Phase 2 / the in-browser
-      // pipeline. The client does not route them here in Phase 1.
-      throw new Error(`Unsupported track mode for server queue: ${mode}`);
-    }
-    if (!isLibraryConfigured()) throw new Error('Library saving is not configured');
-
     const buffer = await processTrack(song, quality, {
       jobId: job.id,
       signal,
@@ -159,30 +161,54 @@ class DownloadWorker {
     });
 
     const artistName = overrideMeta?.artist || getArtistTag(song);
-    const albumName = (overrideMeta?.album || song.more_info?.album || 'Unknown Album');
-    const year = overrideMeta?.year || song.year || '';
-    const albumFolder = `${sanitizeFilename(albumName)}${year ? ` (${year})` : ''}`;
-    const baseName = overrideFilename || `${song.title} - ${artistName}`;
+    const baseName = overrideFilename || `${overrideMeta?.title || song.title} - ${artistName}`;
     const filename = `${sanitizeFilename(baseName)}.m4a`;
 
-    ctx.setProgress(96, 'Saving to library…');
-    const savedPath = await writeToLibrary(buffer, artistName, albumFolder, filename);
+    if (mode === 'library') {
+      if (!isLibraryConfigured()) throw new Error('Library saving is not configured');
+      const albumName = overrideMeta?.album || song.more_info?.album || 'Unknown Album';
+      const year = overrideMeta?.year || song.year || '';
+      const albumFolder = `${sanitizeFilename(albumName)}${year ? ` (${year})` : ''}`;
 
-    recordTrack({
-      saavnId: song.id,
-      title: overrideMeta?.title || song.title,
-      artist: artistName,
-      album: albumName,
-      image: song.image || '',
-      quality,
-      mode: 'library',
-      duration: song.more_info?.duration || '0',
-      playCount: song.play_count || '0',
-      year,
-      language: song.language || '',
-      isExplicit: song.isExplicit || false,
-      filePath: savedPath,
-    });
+      ctx.setProgress(96, 'Saving to library…');
+      const savedPath = await writeToLibrary(buffer, artistName, albumFolder, filename);
+
+      recordTrack({
+        saavnId: song.id,
+        title: overrideMeta?.title || song.title,
+        artist: artistName,
+        album: albumName,
+        image: song.image || '',
+        quality,
+        mode: 'library',
+        duration: song.more_info?.duration || '0',
+        playCount: song.play_count || '0',
+        year,
+        language: song.language || '',
+        isExplicit: song.isExplicit || false,
+        filePath: savedPath,
+      });
+    } else {
+      // Browser-delivery (direct): store an artifact for the browser to fetch.
+      ctx.setProgress(96, 'Finalizing…');
+      const abs = await writeArtifact(job.id, filename, buffer);
+      store.setArtifact(job.id, abs, filename);
+
+      recordTrack({
+        saavnId: song.id,
+        title: overrideMeta?.title || song.title,
+        artist: artistName,
+        album: overrideMeta?.album || song.more_info?.album || '',
+        image: song.image || '',
+        quality,
+        mode,
+        duration: song.more_info?.duration || '0',
+        playCount: song.play_count || '0',
+        year: overrideMeta?.year || song.year || '',
+        language: song.language || '',
+        isExplicit: song.isExplicit || false,
+      });
+    }
   }
 
   // ── Album / playlist job (library mode) ───────────────────────────────────
@@ -190,32 +216,46 @@ class DownloadWorker {
   async processAlbumJob(job, payload, ctx, signal) {
     const { album, quality, mode, albumArtistOverride, isPlaylist } = payload;
 
-    if (mode !== 'library') {
-      throw new Error(`Unsupported album mode for server queue: ${mode}`);
-    }
-    if (!isLibraryConfigured()) throw new Error('Library saving is not configured');
-
     const songs = album.songs || [];
     // Per-track rows were seeded at enqueue time (store.insertAlbumJob). On retry/restart
     // the store resets non-done rows, so we don't reseed here (which would wipe progress).
     this.emit();
 
-    let results;
-    if (isPlaylist) {
-      results = await processPlaylistLibrary(album, quality, ctx);
+    if (mode === 'library') {
+      if (!isLibraryConfigured()) throw new Error('Library saving is not configured');
+
+      let results;
+      if (isPlaylist) {
+        results = await processPlaylistLibrary(album, quality, ctx);
+      } else {
+        // Navidrome fix: auto-detect multi-artist albums when no explicit override.
+        let embedAlbumArtist = albumArtistOverride;
+        if (!embedAlbumArtist) {
+          const info = detectMultiArtist(album);
+          if (info.isMultiArtist) embedAlbumArtist = info.suggestedAlbumArtist;
+        }
+        results = await processAlbumLibrary(album, quality, { ...ctx, albumArtistOverride: embedAlbumArtist });
+      }
+
+      if (signal.aborted) return;
+      this.recordAlbumHistory(job, payload, results);
     } else {
-      // Navidrome fix: auto-detect multi-artist albums when no explicit override.
+      // Browser-delivery (zip / individual): produce a single ZIP artifact (Req 7.5).
       let embedAlbumArtist = albumArtistOverride;
       if (!embedAlbumArtist) {
         const info = detectMultiArtist(album);
         if (info.isMultiArtist) embedAlbumArtist = info.suggestedAlbumArtist;
       }
-      results = await processAlbumLibrary(album, quality, { ...ctx, albumArtistOverride: embedAlbumArtist });
+      const { buffer, filename, results } = await processAlbumArchive(album, quality, {
+        ...ctx,
+        albumArtistOverride: embedAlbumArtist,
+      });
+
+      if (signal.aborted) return;
+      const abs = await writeArtifact(job.id, filename, buffer);
+      store.setArtifact(job.id, abs, filename);
+      this.recordAlbumHistory(job, payload, results);
     }
-
-    if (signal.aborted) return;
-
-    this.recordAlbumHistory(job, payload, results);
   }
 
   /** Album/playlist-level history record (mirrors downloadQueue.recordToHistory). */
@@ -311,12 +351,16 @@ class DownloadWorker {
       this.activeController.abort();
       return true;
     }
+    this.deleteJobArtifact(id);
     store.removeJob(id);
     this.emit();
     return true;
   }
 
   clearCompleted() {
+    for (const p of store.getArtifactPathsForStatuses(['done', 'failed', 'cancelled'])) {
+      void deleteArtifact(p);
+    }
     store.clearCompleted();
     this.emit();
   }
@@ -327,7 +371,10 @@ class DownloadWorker {
     // on its terminal transition sweep or a subsequent clearCompleted.
     const state = store.getState();
     for (const item of state.items) {
-      if (item.id !== this.activeJobId) store.removeJob(item.id);
+      if (item.id !== this.activeJobId) {
+        this.deleteJobArtifact(item.id);
+        store.removeJob(item.id);
+      }
     }
     this.emit();
   }
