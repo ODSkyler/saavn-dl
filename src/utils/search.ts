@@ -1,7 +1,7 @@
 import type { SearchResult } from '../types/saavn';
 
-const SEARCH_API = 'https://rtmx.vercel.app/api/songs?q=';
-  // Defalut API (rtmx.vercel.app). Replace with your jiosaavn-api instance.
+const SEARCH_API = 'https://rthmx.vercel.app/api/songs?q=';
+  // Defalut API (rthmx.vercel.app). Replace with your jiosaavn-api instance.
   // Visit https://github.com/ODSkyler/jiosaavn-api for more information.
 
 interface SearchApiResponse {

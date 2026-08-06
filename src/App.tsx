@@ -297,7 +297,6 @@ export default function App() {
             {/* Song search results */}
             {showSongResults && (
               <motion.div key="song-search" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <SearchErrorBanner error={searchError} />
                 <SearchResults
                   results={view.type === 'song-results' || view.type === 'fetching-song-result' ? view.results : []}
                   query={
@@ -317,7 +316,6 @@ export default function App() {
             {/* Album search results */}
             {showAlbumResults && (
               <motion.div key="album-search" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <SearchErrorBanner error={searchError} />
                 <AlbumResultsPanel
                   view={view}
                   onSelect={handleAlbumResultSelect}
@@ -618,23 +616,6 @@ function BackBtn({ onClick, label }: { onClick: () => void; label: string }) {
         className="group-hover:-translate-x-0.5 transition-transform"><polyline points="15 18 9 12 15 6"/></svg>
       {label}
     </motion.button>
-  );
-}
-
-function SearchErrorBanner({ error }: { error: string }) {
-  if (!error) return null;
-  return (
-    <AnimatePresence>
-      <motion.div initial={{ opacity: 0, y: -6, height: 0 }} animate={{ opacity: 1, y: 0, height: 'auto' }}
-        exit={{ opacity: 0, height: 0 }} className="mb-3 overflow-hidden">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-rose/20 bg-rose/5">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ff6b8a" strokeWidth="2" className="flex-shrink-0">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          <p className="text-[11px] font-mono text-rose/80">{error}</p>
-        </div>
-      </motion.div>
-    </AnimatePresence>
   );
 }
 
