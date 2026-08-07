@@ -1,11 +1,11 @@
 import type { PlaylistSearchResult, PlaylistDetail } from '../types/saavn';
 import { proxyFetch } from './proxy';
 
-const SEARCH_API = 'https://rtmx.vercel.app/api/playlists';
-// Default API (rtmx.vercel.app). Replace with your jiosaavn-api instance.
+const SEARCH_API = 'https://rthmx.vercel.app/api/playlists';
+// Default API (rthmx.vercel.app). Replace with your jiosaavn-api instance.
 // Visit https://github.com/ODSkyler/jiosaavn-api for more information.
-const DETAIL_API = 'https://rtmx.vercel.app/api/playlist';
-// Default API (rtmx.vercel.app). Replace with your jiosaavn-api instance.
+const DETAIL_API = 'https://rthmx.vercel.app/api/playlist';
+// Default API (rthmx.vercel.app). Replace with your jiosaavn-api instance.
 // Visit https://github.com/ODSkyler/jiosaavn-api for more information.
 
 export async function searchPlaylists(query: string): Promise<PlaylistSearchResult[]> {

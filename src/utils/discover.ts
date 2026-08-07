@@ -5,8 +5,8 @@
 
 import { proxyFetch } from './proxy';
 
-const API_BASE = 'https://rtmx.vercel.app/api';
-// Default API (rtmx.vercel.app). Replace with your jiosaavn-api instance.
+const API_BASE = 'https://rthmx.vercel.app/api';
+// Default API (rthmx.vercel.app). Replace with your jiosaavn-api instance.
 // Visit https://github.com/ODSkyler/jiosaavn-api for more information.
 
 // ─── Types ────────────────────────────────────────────────────────────────────
