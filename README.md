@@ -28,13 +28,13 @@ Built with React 18, Vite, TypeScript, and TailwindCSS.
 
 ## Stack
 
-| Layer | Technology |
-|-------|-----------|
-| UI | React 18, TailwindCSS, Framer Motion |
-| Build | Vite 5, TypeScript 5 |
-| Audio | ffmpeg.wasm (in-browser) + ffmpeg-static (server-side), CryptoJS (DES decryption) |
-| Server | Node 20 (raw `node:http`), better-sqlite3, node-cron |
-| Packaging | Docker (multi-stage Bookworm build) |
+| Layer     | Technology                                                                        |
+| --------- | --------------------------------------------------------------------------------- |
+| UI        | React 18, TailwindCSS, Framer Motion                                              |
+| Build     | Vite 5, TypeScript 5                                                              |
+| Audio     | ffmpeg.wasm (in-browser) + ffmpeg-static (server-side), CryptoJS (DES decryption) |
+| Server    | Node 20 (raw `node:http`), better-sqlite3, node-cron                              |
+| Packaging | Docker (multi-stage Bookworm build)                                               |
 
 ---
 
@@ -79,7 +79,7 @@ docker run -p 8080:80 \
 
 ### Running behind a VPN (Gluetun)
 
-When self-hosted, **all external traffic** is routed through `/api/proxy` — this includes search/metadata API calls (`rtmx.vercel.app`, `sda.rhythmax.workers.dev`) as well as audio and cover art CDN fetches. Running behind [Gluetun](https://github.com/qdm12/gluetun) means every outbound request goes through the VPN tunnel while the browser only talks to your server.
+When self-hosted, **all external traffic** is routed through `/api/proxy` — this includes search/metadata API calls (`rthmx.vercel.app`, `sda.rhythmax.workers.dev`) as well as audio and cover art CDN fetches. Running behind [Gluetun](https://github.com/qdm12/gluetun) means every outbound request goes through the VPN tunnel while the browser only talks to your server.
 
 A ready-to-use `docker-compose.yml` is included in the repository with Gluetun (Surfshark/WireGuard) + saavn-dl configured with VPN routing, Library Sync, and persistent SQLite storage. See [`docker-compose.yml`](./docker-compose.yml) for the full setup.
 
@@ -89,17 +89,17 @@ A ready-to-use `docker-compose.yml` is included in the repository with Gluetun (
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SAAVN_LIBRARY_PATH` | _(empty)_ | Fast SSD staging directory. Empty = Save to Library disabled. |
-| `SAAVN_MUSIC_PATH` | _(empty)_ | Permanent NAS directory. Empty = Library Sync disabled. |
-| `SAAVN_DB_PATH` | `./data/saavn-dl.db` | Path to SQLite database file (Docker default: `/data/saavn-dl.db`). |
-| `SAAVN_FFMPEG_PATH` | _(empty)_ | Override path to an ffmpeg binary for server-side downloads. Empty = use the bundled `ffmpeg-static`. |
-| `SAAVN_ARTIFACT_DIR` | _(DB dir)_`/artifacts` | Where server-side browser-delivery files are held until the browser fetches them. |
-| `SAAVN_ARTIFACT_TTL` | `86400` | Seconds to keep an unfetched browser-delivery artifact before cleanup (default 24h). |
-| `SAAVN_FORCE_PROXY` | _(empty)_ | Set to `true` or `1` to prevent fallback to direct browser fetch. Requests fail if the VPN proxy is unreachable. |
-| `PORT` | `80` | Server listen port. |
-| `STATIC_DIR` | `./dist` | Path to built frontend assets. |
+| Variable             | Default                | Description                                                                                                      |
+| -------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `SAAVN_LIBRARY_PATH` | _(empty)_              | Fast SSD staging directory. Empty = Save to Library disabled.                                                    |
+| `SAAVN_MUSIC_PATH`   | _(empty)_              | Permanent NAS directory. Empty = Library Sync disabled.                                                          |
+| `SAAVN_DB_PATH`      | `./data/saavn-dl.db`   | Path to SQLite database file (Docker default: `/data/saavn-dl.db`).                                              |
+| `SAAVN_FFMPEG_PATH`  | _(empty)_              | Override path to an ffmpeg binary for server-side downloads. Empty = use the bundled `ffmpeg-static`.            |
+| `SAAVN_ARTIFACT_DIR` | _(DB dir)_`/artifacts` | Where server-side browser-delivery files are held until the browser fetches them.                                |
+| `SAAVN_ARTIFACT_TTL` | `86400`                | Seconds to keep an unfetched browser-delivery artifact before cleanup (default 24h).                             |
+| `SAAVN_FORCE_PROXY`  | _(empty)_              | Set to `true` or `1` to prevent fallback to direct browser fetch. Requests fail if the VPN proxy is unreachable. |
+| `PORT`               | `80`                   | Server listen port.                                                                                              |
+| `STATIC_DIR`         | `./dist`               | Path to built frontend assets.                                                                                   |
 
 ---
 
@@ -211,14 +211,14 @@ Works without any history (defaults to English trending content). As you downloa
 
 ## Download Modes
 
-| Mode | Description |
-|------|-------------|
-| ⚡ Fast | Direct download without metadata embedding |
-| ✨ Enhanced | Download + embed metadata via ffmpeg.wasm |
-| 💿 Individual Files | Album tracks as individual M4A files |
-| 📁 ZIP Archive | All album tracks bundled into a ZIP |
-| 📚 Save to Library | Tracks saved to server-side directory |
-| 🔄 Library Sync | Staged files moved from SSD to NAS |
+| Mode               | Description                                |
+| ------------------ | ------------------------------------------ |
+| ⚡ Fast             | Direct download without metadata embedding |
+| ✨ Enhanced         | Download + embed metadata via ffmpeg.wasm  |
+| 💿 Individual Files | Album tracks as individual M4A files       |
+| 📁 ZIP Archive      | All album tracks bundled into a ZIP        |
+| 📚 Save to Library  | Tracks saved to server-side directory      |
+| 🔄 Library Sync     | Staged files moved from SSD to NAS         |
 
 ---
 
@@ -237,30 +237,30 @@ saavn-dl detects this automatically:
 
 ## API Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/config` | Server capabilities (library, sync, history, server-downloads flags) |
-| `GET` | `/api/proxy?url=` | Proxy all external fetches through server (VPN) — API calls, audio, images |
-| `GET` | `/api/library/browse?path=` | List directory contents |
-| `POST` | `/api/library/sync` | Trigger immediate sync |
-| `GET` | `/api/library/sync/status` | Sync status + scheduler state |
-| `GET` | `/api/library/sync/config` | Current sync config |
-| `POST` | `/api/library/sync/config` | Update sync config |
-| `POST` | `/api/library/sync/reset-retries` | Reset retry counts |
-| `GET` | `/api/history` | List history entries (`?type=track\|album`) |
-| `GET` | `/api/history/ids` | Downloaded IDs for badge lookups |
-| `GET` | `/api/history/albums/:id/tracks` | Per-track data for an album |
-| `POST` | `/api/history` | Record a download |
-| `DELETE` | `/api/history` | Clear all history |
-| `DELETE` | `/api/history/:id` | Remove a specific entry |
-| `GET` | `/api/downloads` | Current server-side download queue state |
-| `GET` | `/api/downloads/events` | Live queue updates (Server-Sent Events) |
-| `POST` | `/api/downloads/track` | Enqueue a track job |
-| `POST` | `/api/downloads/album` | Enqueue an album/playlist job |
-| `POST` | `/api/downloads/:id/cancel` \| `/retry` \| `/move` | Cancel, retry, or reorder a job |
-| `DELETE` | `/api/downloads/:id` | Remove a job |
-| `POST` | `/api/downloads/pause` \| `/resume` \| `/clear-completed` | Queue controls |
-| `GET` | `/api/downloads/:id/artifact` | Fetch a completed browser-delivery file |
+| Method   | Path                                                      | Description                                                                |
+| -------- | --------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `GET`    | `/api/config`                                             | Server capabilities (library, sync, history, server-downloads flags)       |
+| `GET`    | `/api/proxy?url=`                                         | Proxy all external fetches through server (VPN) — API calls, audio, images |
+| `GET`    | `/api/library/browse?path=`                               | List directory contents                                                    |
+| `POST`   | `/api/library/sync`                                       | Trigger immediate sync                                                     |
+| `GET`    | `/api/library/sync/status`                                | Sync status + scheduler state                                              |
+| `GET`    | `/api/library/sync/config`                                | Current sync config                                                        |
+| `POST`   | `/api/library/sync/config`                                | Update sync config                                                         |
+| `POST`   | `/api/library/sync/reset-retries`                         | Reset retry counts                                                         |
+| `GET`    | `/api/history`                                            | List history entries (`?type=track\|album`)                                |
+| `GET`    | `/api/history/ids`                                        | Downloaded IDs for badge lookups                                           |
+| `GET`    | `/api/history/albums/:id/tracks`                          | Per-track data for an album                                                |
+| `POST`   | `/api/history`                                            | Record a download                                                          |
+| `DELETE` | `/api/history`                                            | Clear all history                                                          |
+| `DELETE` | `/api/history/:id`                                        | Remove a specific entry                                                    |
+| `GET`    | `/api/downloads`                                          | Current server-side download queue state                                   |
+| `GET`    | `/api/downloads/events`                                   | Live queue updates (Server-Sent Events)                                    |
+| `POST`   | `/api/downloads/track`                                    | Enqueue a track job                                                        |
+| `POST`   | `/api/downloads/album`                                    | Enqueue an album/playlist job                                              |
+| `POST`   | `/api/downloads/:id/cancel` \| `/retry` \| `/move`        | Cancel, retry, or reorder a job                                            |
+| `DELETE` | `/api/downloads/:id`                                      | Remove a job                                                               |
+| `POST`   | `/api/downloads/pause` \| `/resume` \| `/clear-completed` | Queue controls                                                             |
+| `GET`    | `/api/downloads/:id/artifact`                             | Fetch a completed browser-delivery file                                    |
 
 ---
 
