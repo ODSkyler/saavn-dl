@@ -1,5 +1,11 @@
 [ 
   {
+    "id": 7,
+    "title": "NEW: TIDAL-DL!",
+    "date": "18-08-2026",
+    "content": "Presenting TIDAL-DL! Download tracks from TIDAL in FLAC. https://tidal-dl.pages.dev"
+  },
+  {
     "id": 6,
     "title": "Metadata Editor!",
     "date": "15-07-2026",
