@@ -212,7 +212,7 @@ export default function App() {
         <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }} className="mb-8 text-center">
           <div className="flex items-center justify-center gap-3 mb-2">
             <h1 className="text-2xl font-display font-bold text-text-primary tracking-tight">
-              saavn<span className="text-cyan">-dl</span>
+              RHYTH<span className="text-cyan">MAX</span>
             </h1>
           </div>
           <p className="text-[13px] text-white/60 font-body">
