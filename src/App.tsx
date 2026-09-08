@@ -384,61 +384,53 @@ initial={{ opacity: 0 }}
         </AnimatePresence>
 
         {/* Support modal */}
-        <AnimatePresence>
-        {showSupport && (
-         <motion.div
-           initial={{ opacity: 0 }}
-           animate={{ opacity: 1 }}
-           exit={{ opacity: 0 }}
-           transition={{ duration: 0.2 }}
-           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
-         >
-           <div className="w-full max-w-md rounded-3xl border border-white/10 bg-black/80 backdrop-blur-xl p-6 shadow-2xl">
+<AnimatePresence>
+  {showSupport && (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+    >
+      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-black/80 backdrop-blur-xl p-6 shadow-2xl">
 
-            <div className="flex items-center justify-between">
-            <h2 className="text-lg font-display font-bold text-text-primary">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-display font-bold text-text-primary">
             Support saavn-dl
-            </h2>
+          </h2>
 
-            <button
+          <button
             onClick={() => setShowSupport(false)}
             className="text-text-muted hover:text-white transition-colors"
-            >
-           ✕
-        </button>
+          >
+            ✕
+          </button>
+        </div>
+
+        <p className="mt-4 text-sm text-white/80 leading-relaxed">
+          If saavn-dl has been useful to you, consider supporting the project.
+          Your support helps keep the service running and covers hosting and
+          development costs.
+        </p>
+
+        <div className="mt-6">
+          <a
+            href="https://ko-fi.com/odskyler"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setShowSupport(false)}
+            className="w-full rounded-xl bg-cyan text-black font-semibold py-3 hover:bg-cyan-dim transition flex items-center justify-center gap-2"
+          >
+            <span>☕</span>
+            <span>Support on Ko-fi</span>
+          </a>
+        </div>
+
       </div>
-
-      <p className="mt-4 text-sm text-white/80 leading-relaxed">
-        If saavn-dl has been useful to you and you'd like to help cover
-        hosting costs, you can support the project using UPI.
-      </p>
-
-      {/* QR Code */}
-<div className="mt-6 flex justify-center">
-  <img
-    src="/support-via-upi.jpg"
-    alt="Support via UPI"
-    className="w-56 rounded-2xl border border-white/10"
-  />
-</div>
-
-<p className="mt-5 text-center text-sm text-white/80">
-  Ko-fi support will be available soon ☕
-</p>
-
-<p className="mt-2 text-center text-xs text-white/50">
-  For now, you can support the project by scanning the UPI QR code above.
-</p>
-
-<p className="mt-5 text-center text-xs text-white/50">
-  Donations are completely optional ❤️<br />
-  Every contribution helps cover hosting and development costs.
-</p>
-
-    </div>
-  </motion.div>
-)}
-        </AnimatePresence>
+    </motion.div>
+  )}
+</AnimatePresence>
 
         <AnimatePresence>
   {showSupportPrompt && (

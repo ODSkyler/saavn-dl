@@ -88,15 +88,13 @@ npm run build
 
 ## ❤️ Support
 
-If saavn-dl has been useful to you and you'd like to help cover hosting and development costs, you can support the project via UPI.
+If saavn-dl has been useful to you and you'd like to help cover hosting and development costs, you can support the project via Ko-fi.
 
 <p align="center">
-  <img src="./public/support-via-upi.jpg" alt="Support via UPI" width="220">
+  <a href="https://ko-fi.com/odskyler">
+    <img src="https://storage.ko-fi.com/cdn/kofi5.png?v=3" alt="Support me on Ko-fi" width="220">
+  </a>
 </p>
-
-**Ko-fi support coming soon ☕**
-
-Donations are completely optional and help keep the project maintained.
 
 ---
 
