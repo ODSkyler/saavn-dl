@@ -14,8 +14,8 @@ import { searchAlbums, fetchAlbumDetail } from './utils/album';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const SONG_API = 'https://rthmx.vercel.app';
-  // Defalut API (sda.rthmx.workers.dev). Replace with your saavn-dl-api instance.
-  // Visit https://github.com/ODSkyler/saavn-dl-api for more information.
+  // Defalut API (rthmx.vercel.app). Replace with your jiosaavn-api instance.
+  // Visit https://github.com/ODSkyler/jiosaavn-api for more information.
 
 // ─── Search tab ───────────────────────────────────────────────────────────────
 
