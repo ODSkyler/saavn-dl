@@ -3,7 +3,7 @@ import type { AlbumSearchResult, AlbumDetail } from '../types/saavn';
 const SEARCH_API = 'https://rthmx.vercel.app/api/albums';
   // Defalut API (rthmx.vercel.app). Replace with your jiosaavn-api instance.
   // Visit https://github.com/ODSkyler/jiosaavn-api for more information.
-const DETAIL_API = 'https://sda.rthmx.workers.dev/album';
+const DETAIL_API = 'https://rthmx.vercel.app/api/album';
   // Defalut API (sda.rthmx.workers.dev). Replace with your saavn-dl-api instance.
   // Visit https://github.com/ODSkyler/saavn-dl-api for more information.
 
@@ -21,8 +21,8 @@ export async function searchAlbums(query: string): Promise<AlbumSearchResult[]> 
   return arr.filter((r) => r.type === 'album' || r.id);
 }
 
-export async function fetchAlbumDetail(albumUrl: string): Promise<AlbumDetail> {
-  const res = await fetch(`${DETAIL_API}?url=${encodeURIComponent(albumUrl)}`);
+export async function fetchAlbumDetail(albumToken: string): Promise<AlbumDetail> {
+  const res = await fetch(`${DETAIL_API}?token=${encodeURIComponent(albumToken)}`);
   if (!res.ok) {
     const txt = await res.text().catch(() => '');
     throw new Error(txt || `Album fetch failed: HTTP ${res.status}`);

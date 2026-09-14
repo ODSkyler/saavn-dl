@@ -34,7 +34,7 @@ export default function TrackCard({ song, onDownloadSuccess }: TrackCardProps) {
   const { more_info } = song;
   const primaryArtists = more_info.artists.primary.map((a) => a.name).join(', ');
   const imageUrl =
-  `https://sda.rthmx.workers.dev/image?url=${encodeURIComponent(song.image)}`;
+  `https://rthmx.vercel.app/api/image?url=${encodeURIComponent(song.image)}`;
   // Defalut API (sda.rthmx.workers.dev). Replace with your saavn-dl-api instance.
   // Visit https://github.com/ODSkyler/saavn-dl-api for more information.
   const [showMetadataEditor, setShowMetadataEditor] = useState(false);

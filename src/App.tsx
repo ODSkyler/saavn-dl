@@ -13,7 +13,7 @@ import { searchAlbums, fetchAlbumDetail } from './utils/album';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const SONG_API = 'https://sda.rthmx.workers.dev';
+const SONG_API = 'https://rthmx.vercel.app';
   // Defalut API (sda.rthmx.workers.dev). Replace with your saavn-dl-api instance.
   // Visit https://github.com/ODSkyler/saavn-dl-api for more information.
 
@@ -42,12 +42,23 @@ type View =
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-async function fetchSong(url: string): Promise<SaavnSong> {
-  const resp = await fetch(`${SONG_API}/song?url=${encodeURIComponent(url)}`);
-  if (!resp.ok) throw new Error((await resp.text().catch(() => '')) || `HTTP ${resp.status}`);
+async function fetchSong(token: string): Promise<SaavnSong> {
+  const resp = await fetch(
+    `${SONG_API}/api/song?token=${encodeURIComponent(token)}`
+  );
+
+  if (!resp.ok) {
+    throw new Error(
+      (await resp.text().catch(() => '')) || `HTTP ${resp.status}`
+    );
+  }
+
   const data: SaavnSong = await resp.json();
-  if (!data?.id || !data?.more_info?.encrypted_media_url)
+
+  if (!data?.id || !data?.more_info?.encrypted_media_url) {
     throw new Error('Invalid response — missing required fields');
+  }
+
   return data;
 }
 
@@ -72,11 +83,22 @@ export default function App() {
 
   // ── Song URL fetch ────────────────────────────────────────────────────────
 
+  function extractSongToken(url: string): string {
+  const match = url.match(/\/song\/[^/]+\/([^/?#]+)/i);
+
+  if (!match?.[1]) {
+    throw new Error('Could not extract song token from JioSaavn URL');
+  }
+
+  return match[1];
+}
+
   const handleUrlFetch = useCallback(async (url: string) => {
     setView({ type: 'fetching-song' });
     setSearchError('');
     try {
-      const song = await fetchSong(url);
+      const token = await extractSongToken(url);
+      const song = await fetchSong(token);
       setView({ type: 'track', song, fromSearch: false });
     } catch (err) {
       setView({ type: 'error', message: err instanceof Error ? err.message : 'Fetch failed', context: 'url' });
@@ -85,11 +107,22 @@ export default function App() {
 
   // ── Album URL fetch ───────────────────────────────────────────────────────
 
+  function extractAlbumToken(url: string): string {
+  const match = url.match(/\/album\/[^/]+\/([^/?#]+)/i);
+
+  if (!match?.[1]) {
+    throw new Error('Could not extract album token from JioSaavn URL');
+  }
+
+  return match[1];
+}
+
   const handleAlbumFetch = useCallback(async (url: string) => {
     setView({ type: 'fetching-album' });
     setSearchError('');
     try {
-      const album = await fetchAlbumDetail(url);
+      const token = await extractAlbumToken(url);
+      const album = await fetchAlbumDetail(token);
       setView({ type: 'album', album, fromSearch: false });
     } catch (err) {
       setView({ type: 'error', message: err instanceof Error ? err.message : 'Album fetch failed', context: 'url' });
@@ -134,7 +167,7 @@ export default function App() {
     setView({ type: 'fetching-song-result', results: currentResults, query: currentQuery, fetchingId: result.id });
     setSearchError('');
     try {
-      const song = await fetchSong(result.perma_url);
+      const song = await fetchSong(result.token);
       setView({ type: 'track', song, fromSearch: true });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to load song';
@@ -151,7 +184,7 @@ export default function App() {
     setView({ type: 'fetching-album-result', results: currentResults, query: currentQuery, fetchingId: result.id });
     setSearchError('');
     try {
-      const album = await fetchAlbumDetail(result.perma_url);
+      const album = await fetchAlbumDetail(result.token);
       setView({ type: 'album', album, fromSearch: true });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to load album';
