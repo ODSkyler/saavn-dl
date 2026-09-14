@@ -70,8 +70,8 @@ export default function AudioPreview({ vlink, title }: AudioPreviewProps) {
     <div>
       <audio
         ref={audioRef}
-        src={`https://sda.rhythmax.workers.dev/preview?url=${encodeURIComponent(vlink)}`}
-          // Defalut API (sda.rhythmax.workers.dev). Replace with your saavn-dl-api instance.
+        src={`https://sda.rthmx.workers.dev/preview?url=${encodeURIComponent(vlink)}`}
+          // Defalut API (sda.rthmx.workers.dev). Replace with your saavn-dl-api instance.
           // Visit https://github.com/ODSkyler/saavn-dl-api for more information.
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
