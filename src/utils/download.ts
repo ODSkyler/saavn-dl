@@ -217,8 +217,16 @@ export async function downloadWithMetadata(opts: DownloadOptions): Promise<void>
   const { song, quality, onProgress, overrideMeta, overrideFilename } = opts;
   const { more_info } = song;
 
+  const encryptedMediaUrl =
+  song.encrypted_media_url ||
+  more_info?.encrypted_media_url;
+
+  if (!encryptedMediaUrl) {
+  throw new Error('Missing encrypted media URL');
+  }
+
   onProgress?.('Decrypting URL…', 8);
-  const decrypted = decryptMediaUrl(more_info.encrypted_media_url);
+  const decrypted = decryptMediaUrl(encryptedMediaUrl);
   const audioUrl = getQualityUrl(decrypted, quality);
 
   onProgress?.('Fetching audio…', 18);
@@ -311,7 +319,15 @@ export async function downloadWithMetadata(opts: DownloadOptions): Promise<void>
 
 export async function downloadDirect( song: SaavnSong, quality: string, overrideFilename?: string,): Promise<void> {
   const { more_info } = song;
-  const decrypted = decryptMediaUrl(more_info.encrypted_media_url);
+  const encryptedMediaUrl =
+  song.encrypted_media_url ||
+  more_info?.encrypted_media_url;
+
+  if (!encryptedMediaUrl) {
+    throw new Error('Missing encrypted media URL');
+  }
+
+  const decrypted = decryptMediaUrl(encryptedMediaUrl);
   const audioUrl = getQualityUrl(decrypted, quality);
   const artist = getArtistTag(song);
   const filename = sanitizeFilename( overrideFilename ?? `${song.title} - ${artist}` ) + '.m4a';

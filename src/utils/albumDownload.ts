@@ -113,7 +113,15 @@ async function trackToBlob(
   const { more_info } = song;
 
   onProgress('Decrypting…', 8);
-  const decrypted = decryptMediaUrl(more_info.encrypted_media_url);
+
+const encryptedMediaUrl =
+  song.encrypted_media_url || more_info?.encrypted_media_url;
+
+if (!encryptedMediaUrl) {
+  throw new Error('Missing encrypted media URL');
+}
+
+const decrypted = decryptMediaUrl(encryptedMediaUrl);
   const audioUrl  = getQualityUrl(decrypted, quality);
 
   onProgress('Fetching audio…', 20);

@@ -22,6 +22,7 @@ export interface SaavnMoreInfo {
   release_date: string;
   vcode: string;
   vlink: string;
+  preview?: string;
 }
 
 export interface SaavnSong {
@@ -36,6 +37,7 @@ export interface SaavnSong {
   year: string;
   play_count: string;
   isExplicit: boolean;
+  encrypted_media_url?: string;
   more_info: SaavnMoreInfo;
 }
 

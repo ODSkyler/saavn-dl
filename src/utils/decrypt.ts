@@ -211,8 +211,38 @@
  * Decrypts a JioSaavn encrypted_media_url using DES ECB PKCS7
  */
 export function decryptMediaUrl(encrypted: string): string {
-  const plain = desDecrypt(atob(encrypted));
+  // Normalize the encrypted Base64 value
+  let normalized = encrypted
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+
+  // Remove existing padding before re-applying it
+  normalized = normalized.replace(/=+$/, '');
+
+  // Base64 length of 1 mod 4 can never be valid
+  if (normalized.length % 4 === 1) {
+    throw new Error('Invalid encrypted media URL encoding');
+  }
+
+  // Restore missing Base64 padding
+  const padding = (4 - (normalized.length % 4)) % 4;
+  normalized += '='.repeat(padding);
+
+  const decoded = atob(normalized);
+  const plain = desDecrypt(decoded);
+
+  // DES/PKCS-style padding
   const paddingLength = plain.charCodeAt(plain.length - 1);
+
+  if (
+    paddingLength < 1 ||
+    paddingLength > 8 ||
+    paddingLength > plain.length
+  ) {
+    throw new Error('Invalid decrypted media URL padding');
+  }
 
   return plain.slice(0, -paddingLength);
 }
