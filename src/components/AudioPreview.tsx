@@ -70,9 +70,9 @@ export default function AudioPreview({ vlink, title }: AudioPreviewProps) {
     <div>
       <audio
         ref={audioRef}
-        src={`https://sda.rthmx.workers.dev/preview?url=${encodeURIComponent(vlink)}`}
-          // Defalut API (sda.rthmx.workers.dev). Replace with your saavn-dl-api instance.
-          // Visit https://github.com/ODSkyler/saavn-dl-api for more information.
+        src={`https://rthmx.vercel.app/api/media?url=${encodeURIComponent(vlink)}`}
+          // Defalut API (rthmx.vercel.app). Replace with your jiosaavn-api instance.
+          // Visit https://github.com/ODSkyler/jiosaavn-api for more information.
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onTimeUpdate={handleTimeUpdate}

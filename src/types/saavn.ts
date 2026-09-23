@@ -99,7 +99,7 @@ export function searchImage(url: string) {
     "50x50"
   );
 
-  return `https://rthmx.vercel.app/api/image?url=${encodeURIComponent(image50)}`;
+  return `https://rthmx.vercel.app/api/media?url=${encodeURIComponent(image50)}`;
   // Defalut API (rthmx.vercel.app). Replace with your jiosaavn-api instance.
   // Visit https://github.com/ODSkyler/jiosaavn-api for more information.
 }
@@ -165,7 +165,7 @@ export interface AlbumDetail {
 export function proxyImage(url: string, size: '50x50' | '150x150' | '500x500' = '150x150'): string {
   if (!url) return '';
   const sized = url.replace(/\d+x\d+/, size).replace('http://', 'https://');
-  return `https://rthmx.vercel.app/api/image?url=${encodeURIComponent(sized)}`;
+  return `https://rthmx.vercel.app/api/media?url=${encodeURIComponent(sized)}`;
   // Defalut API (rthmx.vercel.app). Replace with your jiosaavn-api instance.
   // Visit https://github.com/ODSkyler/jiosaavn-api for more information.
 }

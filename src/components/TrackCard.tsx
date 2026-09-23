@@ -34,7 +34,7 @@ export default function TrackCard({ song, onDownloadSuccess }: TrackCardProps) {
   const { more_info } = song;
   const primaryArtists = more_info.artists.primary.map((a) => a.name).join(', ');
   const imageUrl =
-  `https://rthmx.vercel.app/api/image?url=${encodeURIComponent(song.image)}`;
+  `https://rthmx.vercel.app/api/media?url=${encodeURIComponent(song.image)}`;
   // Defalut API (rthmx.vercel.app). Replace with your jiosaavn-api instance.
   // Visit https://github.com/ODSkyler/jiosaavn-api for more information.
   const [showMetadataEditor, setShowMetadataEditor] = useState(false);

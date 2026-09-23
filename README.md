@@ -82,7 +82,6 @@ npm run build
 ## Host your own JioSaavn API
 
 - To host your own JioSaavn API, check out https://github.com/ODSkyler/jiosaavn-api
-- To host your own saavn-dl API, check out https://github.com/ODSkyler/saavn-dl-api
 
 ---
 
