@@ -55,10 +55,10 @@ export default function TrackCard({ song, onDownloadSuccess }: TrackCardProps) {
     >
       {/* Top section */}
       <div className="p-5">
-        <div className="flex gap-5">
+        <div className="flex flex-col sm:flex-row gap-5">
           {/* Album Art */}
-          <div className="relative flex-shrink-0">
-            <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-xl overflow-hidden bg-border">
+          <div className="relative flex-shrink-0 mx-auto sm:mx-0">
+            <div className="w-40 h-40 sm:w-36 sm:h-36 rounded-xl overflow-hidden bg-border">
               {!imgLoaded && !imgError && (
                 <div className="w-full h-full bg-border animate-pulse rounded-xl" />
               )}
@@ -91,10 +91,10 @@ export default function TrackCard({ song, onDownloadSuccess }: TrackCardProps) {
           </div>
 
           {/* Meta */}
-          <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+          <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 sm:text-left">
             <div>
               <div className="flex items-start gap-2 flex-wrap">
-                <h2 className="text-lg sm:text-xl font-display font-bold text-text-primary leading-tight">
+                <h2 className="text-xl sm:text-xl font-display font-bold text-text-primary leading-tight">
                   {song.title}
                 </h2>
                 {song.isExplicit && (
@@ -112,7 +112,7 @@ export default function TrackCard({ song, onDownloadSuccess }: TrackCardProps) {
                    }
               </p>
 
-              <div className="mt-2 flex items-center gap-3 flex-wrap">
+              <div className="mt-3 flex items-center justify-center sm:justify-start gap-2 flex-wrap">
                 <MetaChip icon="💿" label={more_info.album} />
                 <MetaChip icon="📅" label={song.year} />
                 <MetaChip icon="⏱" label={formatDuration(more_info.duration)} />
@@ -123,35 +123,36 @@ export default function TrackCard({ song, onDownloadSuccess }: TrackCardProps) {
             </div>
 
             {/* Preview + Metadata */}
-            <div className="mt-3 flex items-center gap-3">
-              <button
-  onClick={() => setShowMetadataEditor(true)}
-  className={`px-4 py-2 rounded-xl border transition-all duration-200 text-sm font-display font-medium border whitespace-nowrap ${
-    originalMeta &&
-    editedMeta &&
-    metadataIsModified(originalMeta, editedMeta)
-      ? 'border-white/20 bg-white/5 text-white/80 hover:bg-white/10'
-      : 'border-border bg-glass text-white/40 hover:border-cyan/30 hover:text-white/60'
-  }`}
->
-  {originalMeta &&
-  editedMeta &&
-  metadataIsModified(originalMeta, editedMeta)
-    ? 'Meta Updated'
-    : 'Edit Meta'}
-</button>
-             <div className="flex-1">
-                 {(song.encrypted_media_url || more_info.encrypted_media_url) && (
-                 <AudioPreview
-                  vlink={more_info.vlink || ''}
-                  title={song.title}
-                  encryptedMediaUrl={
-                  song.encrypted_media_url || more_info.encrypted_media_url
-                     }
-                  />
-                )}
-             </div>
-           </div>
+            <div className="mt-3 flex flex-col items-start sm:flex-row sm:items-center gap-3">
+            {/* Metadata button */}
+            <button
+             onClick={() => setShowMetadataEditor(true)}
+             className={`px-4 py-2 rounded-xl border transition-all duration-200 text-sm font-display font-medium whitespace-nowrap ${
+             originalMeta && editedMeta &&
+             metadataIsModified(originalMeta, editedMeta)
+        ? 'border-white/20 bg-white/5 text-white/80 hover:bg-white/10'
+        : 'border-border bg-glass text-white/40 hover:border-cyan/30 hover:text-white/60'
+             }`}
+            >
+           {originalMeta && editedMeta &&
+            metadataIsModified(originalMeta, editedMeta)
+             ? 'Meta Updated'
+             : 'Edit Meta'}
+          </button>
+
+        {/* Audio player */}
+         {(song.encrypted_media_url || more_info.encrypted_media_url) && (
+             <div className="w-full min-w-0 sm:w-auto sm:flex-1">
+                <AudioPreview
+                 vlink={more_info.vlink || ''}
+                 title={song.title}
+                 encryptedMediaUrl={
+                 song.encrypted_media_url || more_info.encrypted_media_url
+                        }
+                     />
+               </div>
+               )}
+            </div>
           </div>
         </div>
       </div>
@@ -161,9 +162,9 @@ export default function TrackCard({ song, onDownloadSuccess }: TrackCardProps) {
 
       {/* Quality + Download */}
       <div className="p-5 space-y-3">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <span className="text-[11px] font-mono text-white/80 uppercase tracking-wider">Quality</span>
-          <QualitySelector selected={quality} onChange={setQuality} />
+        <div className="space-y-2">
+  <span className="block text-[11px] font-mono text-white/80 uppercase tracking-wider">Quality</span>
+  <QualitySelector selected={quality} onChange={setQuality} />
         </div>
 
         <DownloadButton

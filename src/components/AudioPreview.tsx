@@ -139,7 +139,7 @@ export default function AudioPreview({ vlink, title, encryptedMediaUrl }: AudioP
             <path d="M5 3l14 9-14 9V3z" />
           )}
         </svg>
-        {isOpen ? 'Close' : 'Preview'}
+        {isOpen ? 'STOP' : 'PLAY'}
       </motion.button>
 
       <AnimatePresence>
