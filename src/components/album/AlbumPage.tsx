@@ -298,7 +298,11 @@ function TrackRow({ song, index, quality, isExpanded, onToggle }: TrackRowProps)
               <div className="h-px bg-border" />
               {/* Preview */}
               {song.more_info?.preview && (
-                <AudioPreview vlink={song.more_info.preview} title={song.title} />
+                <AudioPreview
+                vlink={song.more_info.preview}
+                  title={song.title}
+                  encryptedMediaUrl={song.encrypted_media_url || song.more_info.encrypted_media_url}
+                />
               )}
               {/* Download */}
               <DownloadButton song={song} quality={quality} />

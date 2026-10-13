@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { decryptMediaUrl, getQualityUrl } from '../utils/decrypt';
 
 interface AudioPreviewProps {
   vlink: string;
   title: string;
+  encryptedMediaUrl?: string;
 }
 
-export default function AudioPreview({ vlink, title }: AudioPreviewProps) {
+export default function AudioPreview({ vlink, title, encryptedMediaUrl }: AudioPreviewProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -22,27 +24,35 @@ export default function AudioPreview({ vlink, title }: AudioPreviewProps) {
   }, []);
 
   const togglePreview = () => {
-    if (!isOpen) {
-      setIsOpen(true);
-      // Auto-play when opening
-      setTimeout(() => {
-        audioRef.current?.play().catch(() => {});
-      }, 300);
-    } else {
-      setIsOpen(false);
-      audioRef.current?.pause();
-      setIsPlaying(false);
-    }
-  };
+  if (!isOpen) {
+    setIsOpen(true);
+
+    // Wait for the player to render before starting playback.
+    setTimeout(() => {
+      void playFullTrack();
+    }, 300);
+  } else {
+    setIsOpen(false);
+    audioRef.current?.pause();
+    setIsPlaying(false);
+  }
+};
 
   const togglePlay = () => {
-    if (!audioRef.current) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play().catch(() => {});
-    }
-  };
+  const audio = audioRef.current;
+
+  if (!audio) return;
+
+  if (isPlaying) {
+    audio.pause();
+  } else if (!audio.src) {
+    void playFullTrack();
+  } else {
+    audio.play().catch((error) => {
+      console.error('Audio playback failed:', error);
+    });
+  }
+};
 
   const handleTimeUpdate = () => {
     if (!audioRef.current) return;
@@ -66,25 +76,52 @@ export default function AudioPreview({ vlink, title }: AudioPreviewProps) {
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
 
+  const playFullTrack = async () => {
+  const audio = audioRef.current;
+
+  if (!audio) return;
+
+  try {
+    setIsLoading(true);
+
+    if (encryptedMediaUrl) {
+      const decryptedUrl = decryptMediaUrl(encryptedMediaUrl);
+      const fullAudioUrl = getQualityUrl(decryptedUrl, '96');
+
+      audio.src = fullAudioUrl.replace(/^http:\/\//i, 'https://');
+    } else {
+      // Fall back to the preview if no encrypted URL is available.
+      audio.src = vlink.replace(/^http:\/\//i, 'https://');
+    }
+
+    await audio.play();
+  } catch (error) {
+    console.error('Audio playback failed:', error);
+    setIsLoading(false);
+  }
+};
+
   return (
     <div>
       <audio
-        ref={audioRef}
-        src={`https://rthmx.vercel.app/api/media?url=${encodeURIComponent(vlink)}`}
-          // Defalut API (rthmx.vercel.app). Replace with your jiosaavn-api instance.
-          // Visit https://github.com/ODSkyler/jiosaavn-api for more information.
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={() => {
-          setDuration(audioRef.current?.duration || 0);
-          setIsLoading(false);
-        }}
-        onWaiting={() => setIsLoading(true)}
-        onCanPlay={() => setIsLoading(false)}
-        onEnded={() => { setIsPlaying(false); setProgress(0); setCurrentTime(0); }}
-        preload="none"
-      />
+       ref={audioRef}
+       src={undefined}
+       onPlay={() => setIsPlaying(true)}
+       onPause={() => setIsPlaying(false)}
+       onTimeUpdate={handleTimeUpdate}
+       onLoadedMetadata={() => {
+       setDuration(audioRef.current?.duration || 0);
+       setIsLoading(false);
+    }}
+  onWaiting={() => setIsLoading(true)}
+  onCanPlay={() => setIsLoading(false)}
+  onEnded={() => {
+    setIsPlaying(false);
+    setProgress(0);
+    setCurrentTime(0);
+  }}
+  preload="none"
+/>
 
       <motion.button
         onClick={togglePreview}

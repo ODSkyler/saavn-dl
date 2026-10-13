@@ -1,6 +1,7 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { toBlobURL } from '@ffmpeg/util';
 import type { SaavnSong } from '../types/saavn';
+import { imageProxyUrl } from '../types/saavn';
 import { decryptMediaUrl, getQualityUrl, sanitizeFilename } from './decrypt';
 import type { TrackMetadata } from '../types/metadata';
 
@@ -64,9 +65,11 @@ function getArtistTag(song: SaavnSong): string {
 }
 
 function getImageUrl(song: SaavnSong): string {
-  return song.image
+  const imageUrl = song.image
     .replace(/\d+x\d+/, '500x500')
-    .replace('http://', 'https://');
+    .replace(/^http:\/\//i, 'https://');
+
+  return imageProxyUrl(imageUrl);
 }
 
 function validateOutput(data: Uint8Array | string, label: string): Uint8Array {

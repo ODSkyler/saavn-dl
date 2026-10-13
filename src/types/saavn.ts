@@ -92,16 +92,11 @@ export function formatDuration(sec?: string) {
 }
 
 export function searchImage(url: string) {
-  if (!url) return "";
+  if (!url) return '';
 
-  const image50 = url.replace(
-    /150x150|500x500/g,
-    "50x50"
-  );
-
-  return `https://rthmx.vercel.app/api/media?url=${encodeURIComponent(image50)}`;
-  // Defalut API (rthmx.vercel.app). Replace with your jiosaavn-api instance.
-  // Visit https://github.com/ODSkyler/jiosaavn-api for more information.
+  return url
+    .replace(/^http:\/\//i, 'https://')
+    .replace(/150x150|500x500/g, '50x50');
 }
 
 export function isSaavnUrl(value: string) {
@@ -161,23 +156,39 @@ export interface AlbumDetail {
   songs: SaavnSong[];
 }
 
-/** Image proxy — always goes through the Vercel proxy */
-export function proxyImage(url: string, size: '50x50' | '150x150' | '500x500' = '150x150'): string {
+/**
+ * Resize a JioSaavn CDN image URL without proxying it.
+ */
+export function proxyImage(
+  url: string,
+  size: '50x50' | '150x150' | '500x500' = '150x150',
+): string {
   if (!url) return '';
-  const sized = url.replace(/\d+x\d+/, size).replace('http://', 'https://');
-  return `https://rthmx.vercel.app/api/media?url=${encodeURIComponent(sized)}`;
-  // Defalut API (rthmx.vercel.app). Replace with your jiosaavn-api instance.
-  // Visit https://github.com/ODSkyler/jiosaavn-api for more information.
+
+  return url
+    .replace(/^http:\/\//i, 'https://')
+    .replace(/\d+x\d+/, size);
 }
 
-/** Alias: album 500x500 cover for the album page */
+/** Alias: album cover for the album page. */
 export function albumImage(url: string): string {
   return proxyImage(url, '500x500');
 }
 
-/** hiResImage used by search result cards */
+/** Image helper for search result cards. */
 export function hiResImage(url: string): string {
   return proxyImage(url, '150x150');
+}
+
+/**
+ * Proxy an image only when fetching its bytes for file embedding.
+ */
+export function imageProxyUrl(url: string): string {
+  if (!url) return '';
+
+  const directUrl = url.replace(/^http:\/\//i, 'https://');
+
+  return `https://rthmx.vercel.app/api/media?url=${encodeURIComponent(directUrl)}`;
 }
 
 export function isSaavnAlbumUrl(value: string): boolean {

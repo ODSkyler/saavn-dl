@@ -33,10 +33,7 @@ export default function TrackCard({ song, onDownloadSuccess }: TrackCardProps) {
   const [imgError, setImgError] = useState(false);
   const { more_info } = song;
   const primaryArtists = more_info.artists.primary.map((a) => a.name).join(', ');
-  const imageUrl =
-  `https://rthmx.vercel.app/api/media?url=${encodeURIComponent(song.image)}`;
-  // Defalut API (rthmx.vercel.app). Replace with your jiosaavn-api instance.
-  // Visit https://github.com/ODSkyler/jiosaavn-api for more information.
+  const imageUrl = song.image.replace(/^http:\/\//i, 'https://').replace(/150x150|500x500/g, '500x500');
   const [showMetadataEditor, setShowMetadataEditor] = useState(false);
   const [originalMeta, setOriginalMeta] = useState<TrackMetadata | null>(null);
   const [editedMeta, setEditedMeta] = useState<TrackMetadata | null>(null);
@@ -148,6 +145,8 @@ export default function TrackCard({ song, onDownloadSuccess }: TrackCardProps) {
                  <AudioPreview
                   vlink={more_info.vlink}
                   title={song.title}
+                  encryptedMediaUrl={song.encrypted_media_url || more_info.encrypted_media_url}
+
                />
           ) : (
               <div className="rounded-2xl border border-border bg-glass px-4 py-3 text-center">
