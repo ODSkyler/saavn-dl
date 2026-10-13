@@ -141,19 +141,14 @@ export default function TrackCard({ song, onDownloadSuccess }: TrackCardProps) {
     : 'Edit Meta'}
 </button>
              <div className="flex-1">
-                 {more_info?.vlink?.trim() ? (
+                 {(song.encrypted_media_url || more_info.encrypted_media_url) && (
                  <AudioPreview
-                  vlink={more_info.vlink}
+                  vlink={more_info.vlink || ''}
                   title={song.title}
-                  encryptedMediaUrl={song.encrypted_media_url || more_info.encrypted_media_url}
-
-               />
-          ) : (
-              <div className="rounded-2xl border border-border bg-glass px-4 py-3 text-center">
-                   <p className="text-sm text-white/50">
-                  Preview not available for this track
-                   </p>
-                </div>
+                  encryptedMediaUrl={
+                  song.encrypted_media_url || more_info.encrypted_media_url
+                     }
+                  />
                 )}
              </div>
            </div>

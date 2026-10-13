@@ -297,11 +297,13 @@ function TrackRow({ song, index, quality, isExpanded, onToggle }: TrackRowProps)
             <div className="px-3 pb-3 space-y-3">
               <div className="h-px bg-border" />
               {/* Preview */}
-              {song.more_info?.preview && (
-                <AudioPreview
-                vlink={song.more_info.preview}
-                  title={song.title}
-                  encryptedMediaUrl={song.encrypted_media_url || song.more_info.encrypted_media_url}
+              {(song.encrypted_media_url || song.more_info?.encrypted_media_url) && (
+              <AudioPreview
+               vlink={song.more_info?.preview || song.more_info?.vlink || ''}
+               title={song.title}
+               encryptedMediaUrl={
+               song.encrypted_media_url || song.more_info?.encrypted_media_url
+                  }
                 />
               )}
               {/* Download */}
