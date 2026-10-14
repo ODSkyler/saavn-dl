@@ -445,7 +445,7 @@ initial={{ opacity: 0 }}
           </h2>
 
           <p className="mt-3 text-sm text-white/75 leading-relaxed">
-           This service is about to exceed it's monthly limits in the next few days which may cause the service to go offline & in order to keep this service alive, Donations are much needed. So if you enjoy using saavn-dl, consider donating to the project on Ko-fi. Your support helps keep the service running and covers hosting and development costs.
+           This project is about to exceed it's monthly limits in the next few days which may cause the service to go offline & in order to keep this project alive, Donations are much needed. So if you enjoy using saavn-dl, consider donating to the project on Ko-fi. Your support helps keep the project running and covers hosting and development costs.
           </p>
         </div>
 
