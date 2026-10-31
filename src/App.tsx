@@ -419,7 +419,7 @@ initial={{ opacity: 0 }}
         </AnimatePresence>
 
         {/* Startup support modal */}
-<AnimatePresence>
+{/* <AnimatePresence>
   {showStartupSupport && (
     <motion.div
       initial={{ opacity: 0 }}
@@ -471,7 +471,7 @@ initial={{ opacity: 0 }}
       </motion.div>
     </motion.div>
   )}
-</AnimatePresence>
+</AnimatePresence> */}
 {/* Startup support modal */}
 
         {/* Support modal */}
